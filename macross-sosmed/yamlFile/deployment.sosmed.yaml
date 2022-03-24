@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: macsosmed
+  namespace: production
+spec:
+  replicas: 1
+  
+  volumes:
+    - name: sosmed
+      configMap:
+        name: p-fb-configmap-secret
+  
+  selector:
+    matchLabels:
+      app: sosmed
+
+  template:
+    metadata:
+      labels:
+        app: sosmed
+  
+    spec:
+      containers:
+      - name: nginx-php-sosmed
+        image : imagessosmed
+        resources:
+         limits:
+           memory: "128Mi"
+           cpu: "500m"
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: mysql-secret
+          mountPath: "/var/www/html/config.php"
+          subPath: "config.php"
+        env:
+        - name : MYSQL_HOST
+          value: aws.rds
+        - name : MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: DB_USER
+        - name : MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: DB_PASS
+
+      my-sql-sosmed:
+      - name: mysql-sosmed
+        image: rundcode/mysql-sosmed-cilsy:2
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_ROOT_PASSWORD
